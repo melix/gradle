@@ -24,8 +24,8 @@ import org.gradle.internal.invocation.BuildAction;
 import org.gradle.internal.service.ServiceRegistry;
 import org.gradle.launcher.cli.converter.LayoutToPropertiesConverter;
 import org.gradle.launcher.cli.converter.PropertiesToDaemonParametersConverter;
-import org.gradle.launcher.daemon.client.DaemonClientBuildActionExecuter;
 import org.gradle.launcher.daemon.client.DaemonClient;
+import org.gradle.launcher.daemon.client.DaemonClientBuildActionExecuter;
 import org.gradle.launcher.daemon.client.DaemonClientFactory;
 import org.gradle.launcher.daemon.configuration.DaemonParameters;
 import org.gradle.launcher.exec.BuildActionExecuter;
@@ -51,6 +51,8 @@ import java.util.Map;
 
 public class ProviderConnection {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProviderConnection.class);
+    private static final NoOpBuildEventConsumer NO_OP_BUILD_EVENT_CONSUMER = new NoOpBuildEventConsumer();
+
     private final PayloadSerializer payloadSerializer;
     private final LoggingServiceRegistry loggingServices;
     private final DaemonClientFactory daemonClientFactory;
@@ -92,13 +94,13 @@ public class ProviderConnection {
                     params.daemonParams.getAllJvmArgs(),
                     params.daemonParams.getEffectiveSystemProperties(),
                     params.daemonParams.getSystemProperties()
-                    );
+            );
         }
 
         StartParameter startParameter = new ProviderStartParameterConverter().toStartParameter(providerParameters, params.properties);
         BuildProgressListenerVersion1 buildProgressListener = providerParameters.getBuildProgressListener(null);
         boolean listenToTestProgress = buildProgressListener != null && buildProgressListener.getSubscribedEvents().contains(BuildProgressListenerVersion1.TEST_PROGRESS);
-        BuildEventConsumer buildEventConsumer = listenToTestProgress ? new BuildProgressListenerInvokingBuildEventConsumer(buildProgressListener) : new NoOpBuildEventConsumer();
+        BuildEventConsumer buildEventConsumer = listenToTestProgress ? new BuildProgressListenerInvokingBuildEventConsumer(buildProgressListener) : NO_OP_BUILD_EVENT_CONSUMER;
         BuildAction action = new BuildModelAction(startParameter, modelName, tasks != null, listenToTestProgress);
         return run(action, cancellationToken, buildEventConsumer, providerParameters, params);
     }
@@ -107,9 +109,8 @@ public class ProviderConnection {
         SerializedPayload serializedAction = payloadSerializer.serialize(clientAction);
         Parameters params = initParams(providerParameters);
         StartParameter startParameter = new ProviderStartParameterConverter().toStartParameter(providerParameters, params.properties);
-        NoOpBuildEventConsumer buildEventConsumer = new NoOpBuildEventConsumer();
         BuildAction action = new ClientProvidedBuildAction(startParameter, serializedAction);
-        return run(action, cancellationToken, buildEventConsumer, providerParameters, params);
+        return run(action, cancellationToken, NO_OP_BUILD_EVENT_CONSUMER, providerParameters, params);
     }
 
     private Object run(BuildAction action, BuildCancellationToken cancellationToken, BuildEventConsumer buildEventConsumer, ProviderOperationParameters providerParameters, Parameters parameters) {
