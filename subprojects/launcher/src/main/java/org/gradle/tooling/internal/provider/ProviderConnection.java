@@ -101,7 +101,12 @@ public class ProviderConnection {
         BuildProgressListenerVersion1 buildProgressListener = providerParameters.getBuildProgressListener(null);
         boolean listenToTestProgress = buildProgressListener != null && buildProgressListener.getSubscribedEvents().contains(BuildProgressListenerVersion1.TEST_PROGRESS);
         BuildEventConsumer buildEventConsumer = listenToTestProgress ? new BuildProgressListenerInvokingBuildEventConsumer(buildProgressListener) : NO_OP_BUILD_EVENT_CONSUMER;
-        BuildAction action = new BuildModelAction(startParameter, modelName, tasks != null, listenToTestProgress);
+        List<String> testIncludePatterns = providerParameters.getTestIncludePatterns(null);
+        TestConfiguration testConfiguration = null;
+        if (testIncludePatterns!=null) {
+            testConfiguration = new TestConfiguration(testIncludePatterns);
+        }
+        BuildAction action = new BuildModelAction(startParameter, modelName, tasks != null, listenToTestProgress, testConfiguration);
         return run(action, cancellationToken, buildEventConsumer, providerParameters, params);
     }
 
