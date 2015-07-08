@@ -65,7 +65,9 @@ class LocalLibraryDependencyResolverTest extends Specification {
         projectModelResolver = new DefaultProjectModelResolver(projectRegistry)
         rootProject = mockProject(':')
         platform = new DefaultJavaPlatform(JavaVersion.current())
-        resolver = new LocalLibraryDependencyResolver(projectModelResolver, platform)
+        JarBinarySpec binary = Mock(JarBinarySpec)
+        binary.targetPlatform >> platform
+        resolver = new LocalLibraryDependencyResolver(projectModelResolver, binary)
         metadata = Mock(DependencyMetaData)
         selector = Mock(LibraryComponentSelector)
         requested = Mock(ModuleVersionSelector)

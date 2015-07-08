@@ -24,8 +24,8 @@ import org.gradle.api.internal.resolve.LocalLibraryDependencyResolver;
 import org.gradle.api.internal.resolve.ProjectModelResolver;
 import org.gradle.internal.service.ServiceRegistration;
 import org.gradle.internal.service.scopes.PluginServiceRegistry;
+import org.gradle.jvm.JarBinarySpec;
 import org.gradle.jvm.internal.model.JarBinarySpecSpecializationSchemaExtractionStrategy;
-import org.gradle.jvm.platform.JavaPlatform;
 import org.gradle.language.base.internal.resolve.DependentSourceSetResolveContext;
 
 public class PlatformJvmServices implements PluginServiceRegistry {
@@ -62,13 +62,13 @@ public class PlatformJvmServices implements PluginServiceRegistry {
 
         @Override
         public boolean canCreate(ResolveContext context) {
-            return context instanceof DependentSourceSetResolveContext;
+            return context instanceof DependentSourceSetResolveContext && ((DependentSourceSetResolveContext) context).getBinary() instanceof JarBinarySpec;
         }
 
         @Override
         public ResolverProvider create(ResolveContext context) {
             LocalLibraryDependencyResolver delegate = new LocalLibraryDependencyResolver(projectModelResolver,
-                (JavaPlatform) ((DependentSourceSetResolveContext) context).getPlatform());
+                (JarBinarySpec) ((DependentSourceSetResolveContext) context).getBinary());
             return DelegatingResolverProvider.of(delegate);
         }
     }

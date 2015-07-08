@@ -17,10 +17,8 @@ package org.gradle.api.internal.resolve;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.TreeMultimap;
+import com.google.common.collect.*;
+import org.gradle.api.Named;
 import org.gradle.api.UnknownProjectException;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
@@ -31,6 +29,9 @@ import org.gradle.api.internal.tasks.DefaultTaskDependency;
 import org.gradle.internal.component.local.model.DefaultLibraryBinaryIdentifier;
 import org.gradle.internal.component.local.model.PublishArtifactLocalArtifactMetaData;
 import org.gradle.internal.component.model.*;
+import org.gradle.internal.reflect.ClassDetails;
+import org.gradle.internal.reflect.ClassInspector;
+import org.gradle.internal.reflect.PropertyDetails;
 import org.gradle.internal.resolve.ArtifactResolveException;
 import org.gradle.internal.resolve.ModuleVersionResolveException;
 import org.gradle.internal.resolve.resolver.ArtifactResolver;
@@ -53,7 +54,10 @@ import org.gradle.model.internal.type.ModelType;
 import org.gradle.platform.base.BinarySpec;
 import org.gradle.platform.base.ComponentSpecContainer;
 import org.gradle.platform.base.LibrarySpec;
+import org.gradle.platform.base.Variant;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 // TODO: This should really live in platform-base, however we need to inject the library requirements at some
@@ -73,11 +77,48 @@ public class LocalLibraryDependencyResolver implements DependencyToComponentIdRe
     };
 
     private final ProjectModelResolver projectModelResolver;
-    private final JavaPlatform javaPlatform;
+    private final JarBinarySpec targetBinary;
 
-    public LocalLibraryDependencyResolver(ProjectModelResolver projectModelResolver, JavaPlatform platform) {
+    public LocalLibraryDependencyResolver(ProjectModelResolver projectModelResolver, JarBinarySpec targetBinary) {
         this.projectModelResolver = projectModelResolver;
-        this.javaPlatform = platform;
+        this.targetBinary = targetBinary;
+    }
+
+    // todo: replace with something using ModelSchema
+    private static Map<String, String> extractVariants(JarBinarySpec spec) {
+        Map<String,String> variants = Maps.newHashMap();
+        Class<? extends JarBinarySpec> specClass = spec.getClass();
+        Set<Class<?>> interfaces = ClassInspector.inspect(specClass).getSuperTypes();
+        for (Class<?> intf : interfaces) {
+            ClassDetails details = ClassInspector.inspect(intf);
+            Collection<? extends PropertyDetails> properties = details.getProperties();
+            for (PropertyDetails property : properties) {
+                List<Method> getters = property.getGetters();
+                for (Method getter : getters) {
+                    if (getter.getAnnotation(Variant.class)!=null) {
+                        extractVariant(variants, spec, property.getName(), getter);
+                    }
+                }
+            }
+        }
+
+        return variants;
+    }
+
+    private static void extractVariant(Map<String, String> variants, JarBinarySpec spec, String name, Method method) {
+        Object result;
+        try {
+            result = method.invoke(spec);
+        } catch (IllegalAccessException e) {
+            result = null;
+        } catch (InvocationTargetException e) {
+            result = null;
+        }
+        if (result instanceof String) {
+            variants.put(name, (String) result);
+        } else if (result instanceof Named) {
+            variants.put(name, ((Named) result).getName());
+        }
     }
 
     @Override
@@ -93,9 +134,9 @@ public class LocalLibraryDependencyResolver implements DependencyToComponentIdRe
                 Collection<? extends BinarySpec> variants = filterBinaries(allVariants);
                 if (!allVariants.isEmpty() && variants.isEmpty()) {
                     // no compatible variant found
-                    result.failed(new ModuleVersionResolveException(selector, noCompatiblePlatformErrorMessage(libraryName, javaPlatform, allVariants)));
+                    result.failed(new ModuleVersionResolveException(selector, noCompatiblePlatformErrorMessage(libraryName, targetBinary.getTargetPlatform(), allVariants)));
                 } else if (variants.size() > 1) {
-                    result.failed(new ModuleVersionResolveException(selector, multipleBinariesForSameVariantErrorMessage(libraryName, javaPlatform, variants)));
+                    result.failed(new ModuleVersionResolveException(selector, multipleBinariesForSameVariantErrorMessage(libraryName, targetBinary.getTargetPlatform(), variants)));
                 } else {
                     JarBinarySpec jarBinary = (JarBinarySpec) variants.iterator().next();
                     DefaultTaskDependency buildDependencies = new DefaultTaskDependency();
@@ -124,11 +165,22 @@ public class LocalLibraryDependencyResolver implements DependencyToComponentIdRe
             return values;
         }
         TreeMultimap<JavaPlatform, JvmBinarySpec> platformToBinary = TreeMultimap.create(JAVA_PLATFORM_COMPARATOR, JVM_BINARY_SPEC_COMPARATOR);
+        Map<String, String> requestedVariants = extractVariants(targetBinary);
+        Set<String> requestedVariantDimensions = requestedVariants.keySet();
         for (BinarySpec binarySpec : values) {
-            if (binarySpec instanceof JvmBinarySpec) {
-                JvmBinarySpec jvmSpec = (JvmBinarySpec) binarySpec;
-                if (jvmSpec.getTargetPlatform().getTargetCompatibility().compareTo(javaPlatform.getTargetCompatibility())<=0) {
-                    platformToBinary.put(jvmSpec.getTargetPlatform(), jvmSpec);
+            if (binarySpec instanceof JarBinarySpec) {
+                Map<String, String> binaryVariants = extractVariants((JarBinarySpec) binarySpec);
+                Sets.SetView<String> comparableVariants = Sets.intersection(requestedVariantDimensions, binaryVariants.keySet());
+                if (!comparableVariants.isEmpty()) {
+                    JvmBinarySpec jvmSpec = (JarBinarySpec) binarySpec;
+                    boolean matching = true;
+                    for (String variant : comparableVariants) {
+                        matching = matching
+                            && ("javaPlatform".equals(variant) || Objects.equals(requestedVariants.get(variant), binaryVariants.get(variant)));
+                    }
+                    if (matching && jvmSpec.getTargetPlatform().getTargetCompatibility().compareTo(targetBinary.getTargetPlatform().getTargetCompatibility()) <= 0) {
+                        platformToBinary.put(jvmSpec.getTargetPlatform(), jvmSpec);
+                    }
                 }
             }
         }
