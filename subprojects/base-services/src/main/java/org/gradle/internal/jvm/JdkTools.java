@@ -16,6 +16,7 @@
 
 package org.gradle.internal.jvm;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.internal.classloader.DefaultClassLoaderFactory;
 import org.gradle.internal.classloader.FilteringClassLoader;
@@ -25,6 +26,7 @@ import org.gradle.internal.reflect.DirectInstantiator;
 
 import javax.tools.JavaCompiler;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -37,6 +39,7 @@ public class JdkTools {
     private static final AtomicReference<JdkTools> INSTANCE = new AtomicReference<JdkTools>();
 
     private final ClassLoader isolatedToolsLoader;
+    private final boolean isJigsaw;
 
     public static JdkTools current() {
         JdkTools jdkTools = INSTANCE.get();
@@ -60,19 +63,37 @@ public class JdkTools {
             }
             DefaultClassPath defaultClassPath = new DefaultClassPath(toolsJar);
             isolatedToolsLoader = new MutableURLClassLoader(filteringClassLoader, defaultClassPath.getAsURLs());
+            isJigsaw = false;
         } else {
             filteringClassLoader.allowPackage("com.sun.tools");
             isolatedToolsLoader = filteringClassLoader;
+            isJigsaw = true;
         }
     }
 
     public JavaCompiler getSystemJavaCompiler() {
-        Class<?> compilerImplClass;
+        Class<?> clazz;
         try {
-            compilerImplClass = isolatedToolsLoader.loadClass(DEFAULT_COMPILER_IMPL_NAME);
+            clazz = isolatedToolsLoader.loadClass(DEFAULT_COMPILER_IMPL_NAME);
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("Could not load class '" + DEFAULT_COMPILER_IMPL_NAME);
         }
-        return DirectInstantiator.instantiate(compilerImplClass.asSubclass(JavaCompiler.class));
+        if (isJigsaw) {
+            try {
+                clazz = isolatedToolsLoader.loadClass("javax.tools.ToolProvider");
+                try {
+                    return (JavaCompiler) clazz.getDeclaredMethod("getSystemJavaCompiler").invoke(null);
+                } catch (IllegalAccessException e) {
+                    throw new GradleException("Unable to create Java compiler instance", e);
+                } catch (InvocationTargetException e) {
+                    throw new GradleException("Unable to create Java compiler instance", e);
+                } catch (NoSuchMethodException e) {
+                    throw new GradleException("Unable to create Java compiler instance", e);
+                }
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("Could not load class javax.tools.ToolProvider");
+            }
+        }
+        return DirectInstantiator.instantiate(clazz.asSubclass(JavaCompiler.class));
     }
 }
