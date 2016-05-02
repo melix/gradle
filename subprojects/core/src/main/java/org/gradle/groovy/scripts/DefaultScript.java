@@ -19,8 +19,13 @@ package org.gradle.groovy.scripts;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.PathValidation;
+import org.gradle.api.Project;
 import org.gradle.api.Script;
-import org.gradle.api.file.*;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.DeleteSpec;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.initialization.dsl.ScriptHandler;
 import org.gradle.api.internal.ClosureBackedAction;
 import org.gradle.api.internal.ProcessOperations;
@@ -253,6 +258,10 @@ public abstract class DefaultScript extends BasicScript {
 
     public String toString() {
         return "script";
+    }
+
+    public Project getProject() {
+        return (Project) getScriptTarget();
     }
 
 

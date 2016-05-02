@@ -17,6 +17,7 @@ package org.gradle.api.internal.tasks;
 
 import com.google.common.collect.Sets;
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import org.apache.commons.lang.StringUtils;
 import org.gradle.api.*;
 import org.gradle.api.internal.NamedDomainObjectContainerConfigureDelegate;
@@ -149,6 +150,11 @@ public class DefaultTaskContainer extends DefaultTaskCollection<Task> implements
         projectAccessListener.beforeRequestingTaskByPath(project);
 
         return project.getTasks().findByName(StringUtils.substringAfterLast(path, Project.PATH_SEPARATOR));
+    }
+
+    @Override
+    public <T extends Task> void configure(String name, @DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0, strategy = Closure.DELEGATE_FIRST) Closure configure) {
+        getByName(name, configure);
     }
 
     public Task resolveTask(String path) {

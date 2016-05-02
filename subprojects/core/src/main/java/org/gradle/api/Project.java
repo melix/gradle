@@ -17,22 +17,31 @@
 package org.gradle.api;
 
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import groovy.lang.MissingPropertyException;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.dsl.ArtifactHandler;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.component.SoftwareComponentContainer;
-import org.gradle.api.file.*;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.DeleteSpec;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.initialization.dsl.ScriptHandler;
-import org.gradle.internal.HasInternalProtocol;
+import org.gradle.api.internal.AbstractTask;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.LoggingManager;
-import org.gradle.api.plugins.*;
+import org.gradle.api.plugins.Convention;
+import org.gradle.api.plugins.ExtensionAware;
+import org.gradle.api.plugins.ExtensionContainer;
+import org.gradle.api.plugins.PluginAware;
 import org.gradle.api.resources.ResourceHandler;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.WorkResult;
+import org.gradle.internal.HasInternalProtocol;
 import org.gradle.process.ExecResult;
 import org.gradle.process.ExecSpec;
 import org.gradle.process.JavaExecSpec;
@@ -480,7 +489,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      * @return The newly created task object
      * @throws InvalidUserDataException If a task with the given name already exists in this project.
      */
-    Task task(String name, Closure configureClosure);
+    Task task(String name, @DelegatesTo(value = AbstractTask.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * <p>Returns the path of this project.  The path is the fully qualified name of the project.</p>
@@ -554,7 +563,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      * @return The project with the given path. Never returns null.
      * @throws UnknownProjectException If no project with the given path exists.
      */
-    Project project(String path, Closure configureClosure);
+    Project project(String path, @DelegatesTo(value = Project.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * <p>Returns a map of the tasks contained in this project, and optionally its subprojects.</p>
@@ -1305,7 +1314,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      *
      * @param configureClosure the closure to use to configure the repositories.
      */
-    void repositories(Closure configureClosure);
+    void repositories(@DelegatesTo(value = RepositoryHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * Returns the dependency handler of this project. The returned dependency handler instance can be used for adding
@@ -1330,7 +1339,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      *
      * @param configureClosure the closure to use to configure the dependencies.
      */
-    void dependencies(Closure configureClosure);
+    void dependencies(@DelegatesTo(value = DependencyHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * Returns the build script handler for this project. You can use this handler to query details about the build
@@ -1491,4 +1500,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      */
     @Incubating
     SoftwareComponentContainer getComponents();
+
+    <T> void extension(@DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0) Closure<?> configure);
+    <T> T extension(Class<T> type);
 }

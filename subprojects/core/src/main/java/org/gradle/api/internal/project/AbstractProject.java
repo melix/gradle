@@ -18,6 +18,7 @@ package org.gradle.api.internal.project;
 
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import groovy.lang.MissingPropertyException;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.ConfigurationContainer;
@@ -1045,5 +1046,15 @@ public abstract class AbstractProject extends AbstractPluginAware implements Pro
     @Override
     public void fireDeferredConfiguration() {
         getDeferredProjectConfiguration().fire();
+    }
+
+    @Override
+    public <T> void extension(@DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0) Closure<?> configure) {
+        getExtensions().configure(type, ClosureBackedAction.of(configure));
+    }
+
+    @Override
+    public <T> T extension(Class<T> type) {
+        return getExtensions().getByType(type);
     }
 }

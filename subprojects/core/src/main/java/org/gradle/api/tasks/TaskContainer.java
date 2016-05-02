@@ -16,6 +16,7 @@
 package org.gradle.api.tasks;
 
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import org.gradle.api.*;
 import org.gradle.internal.HasInternalProtocol;
 
@@ -187,4 +188,6 @@ public interface TaskContainer extends TaskCollection<Task>, PolymorphicDomainOb
      * @throws InvalidUserDataException If a task with the given name already exists in this project.
      */
     <T extends Task> T replace(String name, Class<T> type);
+
+    <T extends Task> void configure(String name, @DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0, strategy = Closure.DELEGATE_FIRST) Closure configure);
 }

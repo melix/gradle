@@ -20,11 +20,18 @@ import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import groovy.lang.GroovyResourceLoader;
 import groovy.lang.Script;
+import groovy.transform.CompileStatic;
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.classgen.Verifier;
-import org.codehaus.groovy.control.*;
+import org.codehaus.groovy.control.CompilationFailedException;
+import org.codehaus.groovy.control.CompilationUnit;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.codehaus.groovy.control.Phases;
+import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.gradle.api.Action;
@@ -78,6 +85,11 @@ public class DefaultScriptCompilationHandler implements ScriptCompilationHandler
         GFileUtils.deleteDirectory(classesDir);
         GFileUtils.mkdirs(classesDir);
         CompilerConfiguration configuration = createBaseCompilerConfiguration(scriptBaseClass);
+        boolean isStaticGroovy = source.getFileName().endsWith(".gradlec");
+        if (isStaticGroovy) {
+            configuration.getCompilationCustomizers()
+                .add(new ASTTransformationCustomizer(CompileStatic.class));
+        }
         configuration.setTargetDirectory(classesDir);
         try {
             compileScript(source, classLoader, configuration, metadataDir, extractingTransformer, verifier);
