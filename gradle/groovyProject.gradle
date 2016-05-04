@@ -27,6 +27,22 @@ sourceSets {
     main.output.dir generatedResourcesDir, builtBy: classpathManifest
 }
 
+task groovyDslExtensions(type:org.gradle.experimental.GroovyDSLExtensionsGenerator) {
+    moduleName = "groovy-dsl-${project.name}"
+    moduleVersion = version
+    classes = fileTree(sourceSets.main.output.classesDir)
+    outputDirectory = file("$buildDir/classes/groovydsl")
+}
+
+if (project.name == 'core') {
+    groovyDslExtensions.additionalExtensions = ['org.gradle.groovy.scripts.DefaultScriptExtension']
+}
+
+jar {
+    dependsOn groovyDslExtensions
+    from groovyDslExtensions.outputDirectory
+}
+
 if (!javaVersion.java6Compatible) {
     sourceSets.all {
         java.exclude '**/jdk6/**'

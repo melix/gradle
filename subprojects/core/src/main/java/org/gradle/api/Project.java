@@ -1339,7 +1339,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      *
      * @param configureClosure the closure to use to configure the dependencies.
      */
-    void dependencies(@DelegatesTo(value = DependencyHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
+    void dependencies(Closure configureClosure);
 
     /**
      * Returns the build script handler for this project. You can use this handler to query details about the build
@@ -1501,6 +1501,4 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
     @Incubating
     SoftwareComponentContainer getComponents();
 
-    <T> void extension(@DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0) Closure<?> configure);
-    <T> T extension(Class<T> type);
 }

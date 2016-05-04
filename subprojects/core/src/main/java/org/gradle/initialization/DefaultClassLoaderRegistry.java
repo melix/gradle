@@ -45,6 +45,7 @@ public class DefaultClassLoaderRegistry implements ClassLoaderRegistry {
         FilteringClassLoader rootClassLoader = classLoaderFactory.createFilteringClassLoader(classLoader);
         rootClassLoader.allowPackage("org.gradle");
         rootClassLoader.allowResources("META-INF/gradle-plugins");
+        rootClassLoader.allowResource("META-INF/services/org.codehaus.groovy.runtime.ExtensionModule");
         rootClassLoader.allowPackage("org.apache.tools.ant");
         rootClassLoader.allowPackage("groovy");
         rootClassLoader.allowPackage("org.codehaus.groovy");

@@ -18,17 +18,37 @@ package org.gradle.api.internal.project;
 
 import com.google.common.collect.Maps;
 import groovy.lang.Closure;
-import groovy.lang.DelegatesTo;
 import groovy.lang.MissingPropertyException;
-import org.gradle.api.*;
+import org.gradle.api.Action;
+import org.gradle.api.AntBuilder;
+import org.gradle.api.CircularReferenceException;
+import org.gradle.api.InvalidUserDataException;
+import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.NamedDomainObjectFactory;
+import org.gradle.api.PathValidation;
+import org.gradle.api.Project;
+import org.gradle.api.ProjectConfigurationException;
+import org.gradle.api.ProjectEvaluationListener;
+import org.gradle.api.Task;
+import org.gradle.api.UnknownProjectException;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.dsl.ArtifactHandler;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.component.SoftwareComponentContainer;
-import org.gradle.api.file.*;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.DeleteSpec;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.initialization.dsl.ScriptHandler;
-import org.gradle.api.internal.*;
+import org.gradle.api.internal.ClosureBackedAction;
+import org.gradle.api.internal.DynamicObjectAware;
+import org.gradle.api.internal.DynamicPropertyNamer;
+import org.gradle.api.internal.ExtensibleDynamicObject;
+import org.gradle.api.internal.FactoryNamedDomainObjectContainer;
+import org.gradle.api.internal.GradleInternal;
+import org.gradle.api.internal.ProcessOperations;
 import org.gradle.api.internal.artifacts.ModuleInternal;
 import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
 import org.gradle.api.internal.file.FileOperations;
@@ -68,7 +88,11 @@ import org.gradle.model.Model;
 import org.gradle.model.RuleSource;
 import org.gradle.model.dsl.internal.NonTransformedModelDslBacking;
 import org.gradle.model.dsl.internal.TransformedModelDslBacking;
-import org.gradle.model.internal.core.*;
+import org.gradle.model.internal.core.DefaultNodeInitializerRegistry;
+import org.gradle.model.internal.core.Hidden;
+import org.gradle.model.internal.core.ModelReference;
+import org.gradle.model.internal.core.ModelRegistrations;
+import org.gradle.model.internal.core.NodeInitializerRegistry;
 import org.gradle.model.internal.manage.binding.StructBindingsStore;
 import org.gradle.model.internal.manage.instance.ManagedProxyFactory;
 import org.gradle.model.internal.manage.schema.ModelSchemaStore;
@@ -85,7 +109,13 @@ import org.gradle.util.Path;
 import javax.inject.Inject;
 import java.io.File;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static java.util.Collections.singletonMap;
 import static org.gradle.util.GUtil.addMaps;
@@ -1046,15 +1076,5 @@ public abstract class AbstractProject extends AbstractPluginAware implements Pro
     @Override
     public void fireDeferredConfiguration() {
         getDeferredProjectConfiguration().fire();
-    }
-
-    @Override
-    public <T> void extension(@DelegatesTo.Target Class<T> type, @DelegatesTo(genericTypeIndex = 0) Closure<?> configure) {
-        getExtensions().configure(type, ClosureBackedAction.of(configure));
-    }
-
-    @Override
-    public <T> T extension(Class<T> type) {
-        return getExtensions().getByType(type);
     }
 }
