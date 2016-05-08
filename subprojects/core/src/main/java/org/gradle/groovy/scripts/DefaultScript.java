@@ -19,7 +19,6 @@ package org.gradle.groovy.scripts;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.PathValidation;
-import org.gradle.api.Project;
 import org.gradle.api.Script;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.ConfigurableFileTree;
@@ -259,10 +258,5 @@ public abstract class DefaultScript extends BasicScript {
     public String toString() {
         return "script";
     }
-
-    public Project getProject() {
-        return (Project) getScriptTarget();
-    }
-
 
 }

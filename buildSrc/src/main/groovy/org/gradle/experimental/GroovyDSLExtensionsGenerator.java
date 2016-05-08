@@ -126,7 +126,7 @@ public class GroovyDSLExtensionsGenerator extends DefaultTask {
     }
 
     private void writeDescriptorFile(List<String> extensionClasses) throws IOException {
-        File extensionDescriptorFile = new File(outputDirectory, "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule");
+        File extensionDescriptorFile = new File(outputDirectory, "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule.static");
         Files.createParentDirs(extensionDescriptorFile);
         StringBuilder sb = new StringBuilder(64 + extensionClasses.size() * 128);
         sb.append("moduleName=").append(moduleName).append("\n");

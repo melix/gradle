@@ -55,14 +55,20 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.CodeSource;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
 public class DefaultScriptCompilationHandler implements ScriptCompilationHandler {
+    private static final String EXT_MODULE_RESOURCE = "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule";
+    public static final String STATIC_EXT_MODULE_RESOURCE = "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule.static";
     private Logger logger = LoggerFactory.getLogger(DefaultScriptCompilationHandler.class);
     private static final NoOpGroovyResourceLoader NO_OP_GROOVY_RESOURCE_LOADER = new NoOpGroovyResourceLoader();
     private static final String METADATA_FILE_NAME = "metadata.bin";
@@ -85,11 +91,6 @@ public class DefaultScriptCompilationHandler implements ScriptCompilationHandler
         GFileUtils.deleteDirectory(classesDir);
         GFileUtils.mkdirs(classesDir);
         CompilerConfiguration configuration = createBaseCompilerConfiguration(scriptBaseClass);
-        boolean isStaticGroovy = source.getFileName().endsWith(".gradlec");
-        if (isStaticGroovy) {
-            configuration.getCompilationCustomizers()
-                .add(new ASTTransformationCustomizer(CompileStatic.class));
-        }
         configuration.setTargetDirectory(classesDir);
         try {
             compileScript(source, classLoader, configuration, metadataDir, extractingTransformer, verifier);
@@ -109,6 +110,11 @@ public class DefaultScriptCompilationHandler implements ScriptCompilationHandler
 
         final EmptyScriptDetector emptyScriptDetector = new EmptyScriptDetector();
         final PackageStatementDetector packageDetector = new PackageStatementDetector();
+        final boolean isStaticGroovy = source.getFileName().endsWith(".gradlec");
+        if (isStaticGroovy) {
+            configuration.getCompilationCustomizers()
+                .add(new ASTTransformationCustomizer(CompileStatic.class));
+        }
         GroovyClassLoader groovyClassLoader = new GroovyClassLoader(classLoader, configuration, false) {
             @Override
             protected CompilationUnit createCompilationUnit(CompilerConfiguration compilerConfiguration,
@@ -123,6 +129,19 @@ public class DefaultScriptCompilationHandler implements ScriptCompilationHandler
                 compilationUnit.addPhaseOperation(packageDetector, Phases.CANONICALIZATION);
                 compilationUnit.addPhaseOperation(emptyScriptDetector, Phases.CANONICALIZATION);
                 return compilationUnit;
+            }
+
+            @Override
+            public Enumeration<URL> getResources(String name) throws IOException {
+                Enumeration<URL> resources = super.getResources(name);
+                if (!isStaticGroovy || !EXT_MODULE_RESOURCE.equals(name)) {
+                    return resources;
+                }
+                List<URL> allResources = new ArrayList<URL>();
+                allResources.addAll(Collections.list(resources));
+                ArrayList<URL> staticExtensions = Collections.list(super.getResources(STATIC_EXT_MODULE_RESOURCE));
+                allResources.addAll(staticExtensions);
+                return Collections.enumeration(allResources);
             }
         };
 
