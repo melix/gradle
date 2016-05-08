@@ -1011,7 +1011,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      *
      * @param configureClosure the closure to use to configure the dependency configurations.
      */
-    void configurations(Closure configureClosure);
+    void configurations(@DelegatesTo(value = ConfigurationContainer.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * Returns a handler for assigning artifacts produced by the project to configurations.
@@ -1339,7 +1339,7 @@ public interface Project extends Comparable<Project>, ExtensionAware, PluginAwar
      *
      * @param configureClosure the closure to use to configure the dependencies.
      */
-    void dependencies(Closure configureClosure);
+    void dependencies(@DelegatesTo(value = DependencyHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure);
 
     /**
      * Returns the build script handler for this project. You can use this handler to query details about the build

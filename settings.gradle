@@ -80,11 +80,19 @@ include 'testKit'
 include 'installationBeacon'
 
 rootProject.name = 'gradle'
+boolean useExperimentalStaticScripts = Boolean.valueOf(System.getProperty('gradle.static', 'false'))
 rootProject.children.each {project ->
     String fileBaseName = project.name.replaceAll("\\p{Upper}") { "-${it.toLowerCase()}" }
     String projectDirName = "subprojects/$fileBaseName"
     project.projectDir = new File(settingsDir, projectDirName)
     project.buildFileName = "${fileBaseName}.gradle"
+    if (useExperimentalStaticScripts) {
+        project.buildFileName = "${fileBaseName}.gradlec"
+        if (!project.buildFile.isFile()) {
+            // no static script available
+            project.buildFileName = "${fileBaseName}.gradle"
+        }
+    }
     assert project.projectDir.isDirectory()
     assert project.buildFile.isFile()
 }

@@ -24,7 +24,7 @@ public class DependencyHandlerExtension {
         return dh.add(configName, notation);
     }
 
-    public static Dependency methodMissingExtension(DependencyHandler dh, String configName, Object notation, @DelegatesTo(Dependency.class) Closure configuration) {
+    public static Dependency methodMissingExtension(DependencyHandler dh, String configName, Object notation, @DelegatesTo(value = Dependency.class, strategy = Closure.DELEGATE_ONLY) Closure configuration) {
         return dh.add(configName, notation, configuration);
     }
 }

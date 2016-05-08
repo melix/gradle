@@ -156,7 +156,7 @@ public class DefaultScriptExtension {
         return getDelegate(script).getBuildFile();
     }
 
-    public static void configurations(DefaultScript script, Closure configureClosure) {
+    public static void configurations(DefaultScript script, @DelegatesTo(value = ConfigurationContainer.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure) {
         getDelegate(script).configurations(configureClosure);
     }
 
