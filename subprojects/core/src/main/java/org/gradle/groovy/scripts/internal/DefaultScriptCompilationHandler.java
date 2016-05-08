@@ -113,7 +113,7 @@ public class DefaultScriptCompilationHandler implements ScriptCompilationHandler
         final boolean isStaticGroovy = source.getFileName().endsWith(".gradlec");
         if (isStaticGroovy) {
             configuration.getCompilationCustomizers()
-                .add(new ASTTransformationCustomizer(CompileStatic.class));
+                .add(new ASTTransformationCustomizer(Collections.singletonMap("extensions", GradleTypeCheckingExtension.class.getName()), CompileStatic.class));
         }
         GroovyClassLoader groovyClassLoader = new GroovyClassLoader(classLoader, configuration, false) {
             @Override

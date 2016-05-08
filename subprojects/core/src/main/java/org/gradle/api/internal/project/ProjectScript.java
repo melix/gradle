@@ -16,6 +16,7 @@
 package org.gradle.api.internal.project;
 
 import groovy.lang.Closure;
+import groovy.lang.DelegatesTo;
 import org.gradle.api.initialization.dsl.ScriptHandler;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.LoggingManager;
@@ -38,7 +39,7 @@ public abstract class ProjectScript extends DefaultScript {
         return getScriptTarget().getBuildscript();
     }
 
-    public void buildscript(Closure configureClosure) {
+    public void buildscript(@DelegatesTo(value = ScriptHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure) {
         getScriptTarget().buildscript(configureClosure);
     }
 

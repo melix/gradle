@@ -35,7 +35,7 @@ task groovyDslExtensions(type:org.gradle.experimental.GroovyDSLExtensionsGenerat
 }
 
 if (project.name == 'core') {
-    groovyDslExtensions.additionalExtensions = ['org.gradle.groovy.scripts.DefaultScriptExtension']
+    groovyDslExtensions.additionalExtensions = ['org.gradle.groovy.scripts.DefaultScriptExtension', 'org.gradle.api.artifacts.dsl.DependencyHandlerExtension']
 }
 
 jar {

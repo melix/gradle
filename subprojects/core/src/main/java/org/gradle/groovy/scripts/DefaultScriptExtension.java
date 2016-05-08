@@ -318,6 +318,18 @@ public class DefaultScriptExtension {
         getDelegate(script).dependencies(configureClosure);
     }
 
+    public static void buildscript(DefaultScript script, @DelegatesTo(value = ScriptHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configure) {
+        getDelegate(script).buildscript(configure);
+    }
+
+    public static void dependencies(ScriptHandler sh, @DelegatesTo(value = DependencyHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configureClosure) {
+        sh.dependencies(configureClosure);
+    }
+
+    public static void repositories(ScriptHandler sh, @DelegatesTo(value = RepositoryHandler.class, strategy = Closure.DELEGATE_FIRST) Closure configure) {
+        sh.repositories(configure);
+    }
+
     public static Logger getLogger(DefaultScript script) {
         return getDelegate(script).getLogger();
     }
