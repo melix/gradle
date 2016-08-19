@@ -18,9 +18,6 @@ package org.gradle.launcher.daemon.registry;
 import org.gradle.api.internal.cache.Cache;
 import org.gradle.api.internal.cache.CacheAccessSerializer;
 import org.gradle.api.internal.cache.MapBackedCache;
-import org.gradle.cache.internal.FileLockManager;
-import org.gradle.internal.Factory;
-import org.gradle.internal.nativeintegration.filesystem.Chmod;
 
 import java.io.File;
 import java.util.HashMap;
@@ -52,13 +49,18 @@ public class DaemonRegistryServices {
         return new DaemonDir(daemonBaseDir);
     }
 
-    DaemonRegistry createDaemonRegistry(DaemonDir daemonDir, final FileLockManager fileLockManager, final Chmod chmod) {
+    /*DaemonRegistry createDaemonRegistry(DaemonDir daemonDir, final FileLockManager fileLockManager, final Chmod chmod) {
         final File daemonRegistryFile = daemonDir.getRegistry();
         return daemonRegistryCache.get(daemonRegistryFile, new Factory<DaemonRegistry>() {
             public DaemonRegistry create() {
                 return new PersistentDaemonRegistry(daemonRegistryFile, fileLockManager, chmod);
             }
         });
+    }*/
+
+    DaemonRegistry createDaemonRegistry(DaemonDir daemonDir) {
+        final File daemonRegistryFile = daemonDir.getRegistry();
+        return new ChronicleDaemonRegistry(daemonRegistryFile);
     }
 
     Properties createProperties() {

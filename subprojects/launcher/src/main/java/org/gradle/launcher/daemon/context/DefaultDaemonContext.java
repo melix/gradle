@@ -16,8 +16,12 @@
 package org.gradle.launcher.daemon.context;
 
 import com.google.common.base.Joiner;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshallable;
+import net.openhft.lang.model.constraints.NotNull;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,14 +29,17 @@ import java.util.List;
  *
  * @see DaemonContextBuilder
  */
-public class DefaultDaemonContext implements DaemonContext {
+public class DefaultDaemonContext implements DaemonContext, BytesMarshallable {
 
-    private final String uid;
-    private final File javaHome;
-    private final File daemonRegistryDir;
-    private final Long pid;
-    private final Integer idleTimeout;
-    private final List<String> daemonOpts;
+    private String uid;
+    private File javaHome;
+    private File daemonRegistryDir;
+    private Long pid;
+    private Integer idleTimeout;
+    private List<String> daemonOpts;
+
+    public DefaultDaemonContext() {
+    }
 
     public DefaultDaemonContext(String uid, File javaHome, File daemonRegistryDir, Long pid, Integer idleTimeout, List<String> daemonOpts) {
         this.uid = uid;
@@ -45,7 +52,7 @@ public class DefaultDaemonContext implements DaemonContext {
 
     public String toString() {
         return String.format("DefaultDaemonContext[uid=%s,javaHome=%s,daemonRegistryDir=%s,pid=%s,idleTimeout=%s,daemonOpts=%s]",
-                uid, javaHome, daemonRegistryDir, pid, idleTimeout, Joiner.on(',').join(daemonOpts));
+            uid, javaHome, daemonRegistryDir, pid, idleTimeout, Joiner.on(',').join(daemonOpts));
     }
 
     public String getUid() {
@@ -70,5 +77,38 @@ public class DefaultDaemonContext implements DaemonContext {
 
     public List<String> getDaemonOpts() {
         return daemonOpts;
+    }
+
+    @Override
+    public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+        uid = in.readUTFΔ();
+        javaHome = new File(in.readUTF());
+        daemonRegistryDir = new File(in.readUTF());
+        pid = in.readBoolean() ? in.readLong() : null;
+        idleTimeout = in.readBoolean() ? in.readInt() : null;
+        int optCount = in.readInt();
+        daemonOpts = new ArrayList<String>(optCount);
+        for (int i = 0; i < optCount; i++) {
+            daemonOpts.add(in.readUTF());
+        }
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull Bytes out) {
+        out.writeUTFΔ(uid);
+        out.writeUTF(javaHome.getAbsolutePath());
+        out.writeUTF(daemonRegistryDir.getAbsolutePath());
+        out.writeBoolean(pid != null);
+        if (pid != null) {
+            out.writeLong(pid);
+        }
+        out.writeBoolean(idleTimeout != null);
+        if (idleTimeout != null) {
+            out.writeInt(idleTimeout);
+        }
+        out.writeInt(daemonOpts.size());
+        for (String daemonOpt : daemonOpts) {
+            out.writeUTF(daemonOpt);
+        }
     }
 }

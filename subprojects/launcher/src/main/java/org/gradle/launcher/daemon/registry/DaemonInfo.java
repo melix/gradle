@@ -18,27 +18,32 @@ package org.gradle.launcher.daemon.registry;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshallable;
+import net.openhft.lang.model.constraints.NotNull;
 import org.gradle.internal.TimeProvider;
 import org.gradle.internal.TrueTimeProvider;
 import org.gradle.internal.remote.Address;
 import org.gradle.launcher.daemon.context.DaemonConnectDetails;
 import org.gradle.launcher.daemon.context.DaemonContext;
+import org.gradle.launcher.daemon.context.DefaultDaemonContext;
 import org.gradle.launcher.daemon.server.api.DaemonStateControl.State;
 
 import java.io.Serializable;
 import java.util.Date;
 
-import static org.gradle.launcher.daemon.server.api.DaemonStateControl.State.*;
+import static org.gradle.launcher.daemon.server.api.DaemonStateControl.State.Busy;
+import static org.gradle.launcher.daemon.server.api.DaemonStateControl.State.Idle;
 
 /**
  * Provides information about a daemon that is potentially available to do some work.
  */
-public class DaemonInfo implements Serializable, DaemonConnectDetails {
+public class DaemonInfo implements Serializable, DaemonConnectDetails, BytesMarshallable {
 
-    private final Address address;
-    private final DaemonContext context;
-    private final byte[] token;
-    private final TimeProvider timeProvider;
+    private Address address;
+    private DaemonContext context;
+    private byte[] token;
+    private TimeProvider timeProvider;
 
     private State state;
     private long lastBusy;
@@ -99,4 +104,29 @@ public class DaemonInfo implements Serializable, DaemonConnectDetails {
         return String.format("DaemonInfo{pid=%s, address=%s, state=%s, lastBusy=%s, context=%s}", context.getPid(), address, state, lastBusy, context);
     }
 
+    @Override
+    public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+        //address = (Address) in.readObject();
+        token = new byte[in.readInt()];
+        in.readFully(token);
+        timeProvider = new TrueTimeProvider();
+        state = State.values()[in.readByte()];
+        lastBusy = in.readLong();
+        context = new DefaultDaemonContext();
+        ((DefaultDaemonContext)context).readMarshallable(in);
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull Bytes out) {
+        //out.writeObject(address);
+        out.writeInt(token.length);
+        out.write(token);
+        out.writeByte(state.ordinal());
+        out.writeLong(lastBusy);
+        ((BytesMarshallable)context).writeMarshallable(out);
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
 }

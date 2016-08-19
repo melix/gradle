@@ -166,6 +166,10 @@ libraries.bouncycastle_pgp = dependencies.module("org.bouncycastle:bcpg-jdk15on:
 
 libraries.joda = 'joda-time:joda-time:2.8.2@jar'
 
+libraries.chronicle2 = dependencies.create('net.openhft:chronicle-map:2.4.9') {
+    exclude group: 'org.slf4j'
+}
+
 versions.aws = "1.11.6"
 versions.jackson = "2.6.6"
 libraries.awsS3 = [

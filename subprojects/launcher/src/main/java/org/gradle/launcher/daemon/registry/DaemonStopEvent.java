@@ -16,6 +16,9 @@
 
 package org.gradle.launcher.daemon.registry;
 
+import net.openhft.lang.io.Bytes;
+import net.openhft.lang.io.serialization.BytesMarshallable;
+import net.openhft.lang.model.constraints.NotNull;
 import org.gradle.api.Nullable;
 import org.gradle.launcher.daemon.server.expiry.DaemonExpirationStatus;
 
@@ -26,13 +29,13 @@ import java.util.Date;
 /**
  * Information regarding when and why a daemon was stopped.
  */
-public class DaemonStopEvent implements Serializable {
-    private final Date timestamp;
-    private final long pid;
+public class DaemonStopEvent implements Serializable, BytesMarshallable {
+    private Date timestamp;
+    private long pid;
     @Nullable
-    private final DaemonExpirationStatus status;
+    private DaemonExpirationStatus status;
     @Nullable
-    private final String reason;
+    private String reason;
 
     public DaemonStopEvent(Date timestamp, long pid, @Nullable DaemonExpirationStatus status, @Nullable String reason) {
         this.timestamp = timestamp;
@@ -97,5 +100,29 @@ public class DaemonStopEvent implements Serializable {
         cal.setTime(new Date(System.currentTimeMillis()));
         cal.add(Calendar.HOUR_OF_DAY, -1 * numHours);
         return timestamp.after(cal.getTime());
+    }
+
+    @Override
+    public void readMarshallable(@NotNull Bytes in) throws IllegalStateException {
+        timestamp = new Date(in.readLong());
+        pid = in.readLong();
+        status = in.readBoolean() ? DaemonExpirationStatus.values()[in.readByte()] : null;
+        if (in.readBoolean()) {
+            reason = in.readUTF();
+        }
+    }
+
+    @Override
+    public void writeMarshallable(@NotNull Bytes out) {
+        out.writeLong(timestamp.getTime());
+        out.writeLong(pid);
+        out.writeBoolean(status != null);
+        if (status != null) {
+            out.writeByte(status.ordinal());
+        }
+        out.writeBoolean(reason != null);
+        if (reason != null) {
+            out.writeUTF(reason);
+        }
     }
 }

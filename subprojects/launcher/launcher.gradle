@@ -17,6 +17,7 @@ dependencies {
     compile project(':native')
 
     compile libraries.slf4j_api
+    compile libraries.chronicle2
 
     testCompile libraries.groovy
 
