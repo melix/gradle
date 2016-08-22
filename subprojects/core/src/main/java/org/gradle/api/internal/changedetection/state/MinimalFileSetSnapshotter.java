@@ -16,6 +16,7 @@
 
 package org.gradle.api.internal.changedetection.state;
 
+import org.gradle.api.Action;
 import org.gradle.api.UncheckedIOException;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTreeElement;
@@ -62,6 +63,18 @@ public class MinimalFileSetSnapshotter extends AbstractFileCollectionSnapshotter
                 fileTreeElements.add(createFileVisitDetails(file, fileAttributes));
             } else {
                 missingFiles.add(new MissingFileVisitDetails(file));
+            }
+        }
+    }
+
+    @Override
+    protected void visitFiles(FileCollection input, Action<? super FileTreeElement> onExistingFile, Action<? super FileTreeElement> onMissingFile) {
+        for (File file : input.getFiles()) {
+            BasicFileAttributes fileAttributes = getFileAttributes(file);
+            if (fileAttributes != null) {
+                onExistingFile.execute(createFileVisitDetails(file, fileAttributes));
+            } else {
+                onMissingFile.execute(new MissingFileVisitDetails(file));
             }
         }
     }

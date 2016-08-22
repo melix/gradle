@@ -16,8 +16,8 @@
 
 package org.gradle.api.internal.changedetection.state;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.gradle.api.Action;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTreeElement;
 import org.gradle.api.internal.cache.StringInterner;
@@ -56,39 +56,42 @@ abstract class AbstractFileCollectionSnapshotter implements FileCollectionSnapsh
     }
 
     @Override
-    public FileCollectionSnapshot snapshot(FileCollection input, TaskFilePropertyCompareType compareType, final TaskFilePropertyPathSensitivityType pathSensitivity) {
-        final List<FileTreeElement> fileTreeElements = Lists.newLinkedList();
-        final List<FileTreeElement> missingFiles = Lists.newArrayList();
-        visitFiles(input, fileTreeElements, missingFiles);
-
-        if (fileTreeElements.isEmpty() && missingFiles.isEmpty()) {
-            return emptySnapshot();
-        }
-
+    public FileCollectionSnapshot snapshot(final FileCollection input, TaskFilePropertyCompareType compareType, final TaskFilePropertyPathSensitivityType pathSensitivity) {
         final Map<String, NormalizedFileSnapshot> snapshots = Maps.newLinkedHashMap();
 
         cacheAccess.useCache("Create file snapshot", new Runnable() {
+            @Override
             public void run() {
-                for (FileTreeElement fileDetails : fileTreeElements) {
-                    String absolutePath = getInternedAbsolutePath(fileDetails.getFile());
-                    if (!snapshots.containsKey(absolutePath)) {
-                        IncrementalFileSnapshot snapshot;
-                        if (fileDetails.isDirectory()) {
-                            snapshot = DirSnapshot.getInstance();
-                        } else {
-                            snapshot = new FileHashSnapshot(snapshotter.snapshot(fileDetails).getHash(), fileDetails.getLastModified());
+                visitFiles(input, new Action<FileTreeElement>() {
+                    @Override
+                    public void execute(FileTreeElement fileDetails) {
+                        String absolutePath = getInternedAbsolutePath(fileDetails.getFile());
+                        if (!snapshots.containsKey(absolutePath)) {
+                            IncrementalFileSnapshot snapshot;
+                            if (fileDetails.isDirectory()) {
+                                snapshot = DirSnapshot.getInstance();
+                            } else {
+                                snapshot = new FileHashSnapshot(snapshotter.snapshot(fileDetails).getHash(), fileDetails.getLastModified());
+                            }
+                            snapshots.put(absolutePath, pathSensitivity.getNormalizedSnapshot(fileDetails, snapshot, stringInterner));
                         }
-                        snapshots.put(absolutePath, pathSensitivity.getNormalizedSnapshot(fileDetails, snapshot, stringInterner));
                     }
-                }
-                for (FileTreeElement missingFileDetails : missingFiles) {
-                    String absolutePath = getInternedAbsolutePath(missingFileDetails.getFile());
-                    if (!snapshots.containsKey(absolutePath)) {
-                        snapshots.put(absolutePath, pathSensitivity.getNormalizedSnapshot(missingFileDetails, MissingFileSnapshot.getInstance(), stringInterner));
+                }, new Action<FileTreeElement>() {
+                    @Override
+                    public void execute(FileTreeElement missingFileDetails) {
+                        String absolutePath = getInternedAbsolutePath(missingFileDetails.getFile());
+                        if (!snapshots.containsKey(absolutePath)) {
+                            snapshots.put(absolutePath, pathSensitivity.getNormalizedSnapshot(missingFileDetails, MissingFileSnapshot.getInstance(), stringInterner));
+                        }
                     }
-                }
+                });
             }
         });
+
+        if (snapshots.isEmpty()) {
+            return emptySnapshot();
+        }
+
         return new DefaultFileCollectionSnapshot(snapshots, compareType);
     }
 
@@ -102,4 +105,6 @@ abstract class AbstractFileCollectionSnapshotter implements FileCollectionSnapsh
     }
 
     abstract protected void visitFiles(FileCollection input, List<FileTreeElement> fileTreeElements, List<FileTreeElement> missingFiles);
+
+    abstract protected void visitFiles(FileCollection input, Action<? super FileTreeElement> onExistingFile, Action<? super FileTreeElement> onMissingFile);
 }

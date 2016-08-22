@@ -16,7 +16,7 @@
 
 package org.gradle.api.internal.changedetection.state;
 
-import com.google.common.collect.ImmutableList;
+import org.gradle.api.Action;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTreeElement;
 import org.gradle.api.file.FileVisitDetails;
@@ -26,38 +26,65 @@ import org.gradle.api.internal.file.FileResolver;
 import org.gradle.api.internal.file.FileTreeInternal;
 import org.gradle.api.internal.file.collections.DefaultFileCollectionResolveContext;
 
-import java.util.Collection;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 
 public class DefaultFileCollectionSnapshotter extends AbstractFileCollectionSnapshotter {
+    private final static File LOGFILE = new File("/tmp/snapshot.txt");
+
     public DefaultFileCollectionSnapshotter(FileSnapshotter snapshotter, TaskArtifactStateCacheAccess cacheAccess, StringInterner stringInterner, FileResolver fileResolver) {
         super(snapshotter, cacheAccess, stringInterner, fileResolver);
     }
 
     @Override
     protected void visitFiles(FileCollection input, final List<FileTreeElement> fileTreeElements, final List<FileTreeElement> missingFiles) {
+        visitFiles(input, new Action<FileTreeElement>() {
+            @Override
+            public void execute(FileTreeElement fileTreeElement) {
+                fileTreeElements.add(fileTreeElement);
+            }
+        }, null);
+    }
+
+    @Override
+    protected void visitFiles(FileCollection input, Action<? super FileTreeElement> onExistingFile, Action<? super FileTreeElement> onMissingFile) {
         DefaultFileCollectionResolveContext context = new DefaultFileCollectionResolveContext(fileResolver);
         context.add(input);
         List<FileTreeInternal> fileTrees = context.resolveAsFileTrees();
 
         for (FileTreeInternal fileTree : fileTrees) {
-            fileTreeElements.addAll(visitTreeForSnapshotting(fileTree));
+            visitTreeForSnapshotting(fileTree, onExistingFile);
         }
     }
 
-    private Collection<? extends FileTreeElement> visitTreeForSnapshotting(FileTreeInternal fileTree) {
-        final ImmutableList.Builder<FileTreeElement> fileTreeElements = ImmutableList.builder();
+    private void visitTreeForSnapshotting(FileTreeInternal fileTree, final Action<? super FileTreeElement> action) {
+        //final StringBuilder sb = new StringBuilder("Snapshotting\n------------\n");
+        //new RuntimeException().printStackTrace(new PrintWriter(new StringBuilderWriter(sb)));
         fileTree.visitTreeOrBackingFile(new FileVisitor() {
             @Override
             public void visitDir(FileVisitDetails dirDetails) {
-                fileTreeElements.add(dirDetails);
+                action.execute(dirDetails);
+                //sb.append("Dir:  ").append(dirDetails.getFile().getAbsolutePath()).append("\n");
             }
 
             @Override
             public void visitFile(FileVisitDetails fileDetails) {
-                fileTreeElements.add(fileDetails);
+                action.execute(fileDetails);
+                //sb.append("File: ").append(fileDetails.getFile().getAbsolutePath()).append("\n");
             }
         });
-        return fileTreeElements.build();
+        //log(sb.toString());
+    }
+
+    private static void log(String str) {
+        try {
+            FileWriter wrt = new FileWriter(LOGFILE, true);
+            wrt.append(str);
+            wrt.close();
+        } catch (IOException e) {
+            // d
+        }
     }
 }
