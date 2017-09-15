@@ -1,0 +1,30 @@
+
+* Started at 2017-08-31T14:22:57.924Z
+
+* Settings
+Project dir: .
+Output dir: profile-out
+Profiler: Honest profiler
+Benchmark: false
+Versions: [/home/cchampeau/DEV/gradle-source-build]
+Gradle User Home: gradle-user-home
+Targets: [cleanAssemble]
+com.typesafe.config.ConfigException$IO: performance.scenarios: java.io.FileNotFoundException: performance.scenarios (No such file or directory)
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:188)
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:174)
+	at com.typesafe.config.impl.Parseable.parse(Parseable.java:299)
+	at com.typesafe.config.ConfigFactory.parseFile(ConfigFactory.java:688)
+	at org.gradle.profiler.ScenarioLoader.loadScenarios(ScenarioLoader.java:73)
+	at org.gradle.profiler.ScenarioLoader.loadScenarios(ScenarioLoader.java:49)
+	at org.gradle.profiler.Main.run(Main.java:52)
+	at org.gradle.profiler.Main.main(Main.java:24)
+Caused by: java.io.FileNotFoundException: performance.scenarios (No such file or directory)
+	at java.io.FileInputStream.open0(Native Method)
+	at java.io.FileInputStream.open(FileInputStream.java:195)
+	at java.io.FileInputStream.<init>(FileInputStream.java:138)
+	at com.typesafe.config.impl.Parseable$ParseableFile.reader(Parseable.java:638)
+	at com.typesafe.config.impl.Parseable.reader(Parseable.java:99)
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:231)
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:180)
+	... 7 more
+
